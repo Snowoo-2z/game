@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>ÉPÉE &amp; NÉONS — Le Dernier Écuyer</title>
+<meta name="description" content="Un platformer pixel art : une ville moderne, un Roi, des gardes royaux... et aucune arme à feu. Retrouve la Couronne d'Or !">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><text y='13' font-size='13'>⚔️</text></svg>">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div id="page">
+    <header id="topbar">
+      <div class="logo">⚔️ ÉPÉE <span>&amp;</span> NÉONS</div>
+      <div class="top-actions">
+        <button id="btn-sound" class="icon-btn" title="Son (M)">🔊</button>
+        <button id="btn-full" class="icon-btn" title="Plein écran">⛶</button>
+        <button id="btn-help" class="icon-btn" title="Aide">❓</button>
+      </div>
+    </header>
+
+    <main id="stage">
+      <canvas id="game" width="480" height="272"></canvas>
+
+      <!-- ÉCRAN TITRE -->
+      <section id="screen-title" class="screen">
+        <img class="keyart" src="assets/keyart.jpg" alt="L'écuyer moderne devant la ville néon et le château du Roi">
+        <div class="title-gradient"></div>
+        <div class="title-content">
+          <div class="title-badge">AN DE GRÂCE 2026 • ROYAUME DE VALNÉON</div>
+          <h1>ÉPÉE <span class="amp">&amp;</span> NÉONS</h1>
+          <p class="tagline">Le Dernier Écuyer</p>
+          <p class="story">
+            La <b>Couronne d'Or</b> du roi Aldéric III a été volée par le
+            <b>Capitaine Corvus</b> et ses gardes renégats !
+            Toi, <b>Léo</b>, écuyer livreur en baskets, traverse la ville moderne,
+            grimpe sur les remparts et reprends le château... <b>à l'épée</b>.
+            Ici, par décret royal, <b>aucune arme à feu</b> n'existe. 🏰
+          </p>
+          <div class="menu-btns">
+            <button id="btn-play" class="btn btn-main">▶ NOUVELLE QUÊTE</button>
+            <button id="btn-continue" class="btn hidden">↪ CONTINUER</button>
+            <button id="btn-how" class="btn">📜 COMMENT JOUER</button>
+          </div>
+          <p class="press-key">— ou appuie sur <kbd>Entrée</kbd> —</p>
+          <p id="best-score" class="best-score hidden"></p>
+        </div>
+      </section>
+
+      <!-- AIDE -->
+      <section id="screen-help" class="screen hidden">
+        <div class="panel">
+          <h2>📜 Le Code de l'Écuyer</h2>
+          <div class="controls-grid">
+            <div><kbd>←</kbd><kbd>→</kbd> ou <kbd>Q</kbd><kbd>D</kbd></div><div>Courir</div>
+            <div><kbd>Espace</kbd> / <kbd>Z</kbd> / <kbd>↑</kbd></div><div>Sauter — <b>2× = double saut !</b></div>
+            <div><kbd>J</kbd> / <kbd>X</kbd> / <kbd>F</kbd></div><div>Attaquer à l'épée ⚔️</div>
+            <div><kbd>K</kbd> / <kbd>Maj</kbd></div><div>Dash (esquive éclair)</div>
+            <div><kbd>P</kbd> / <kbd>Échap</kbd></div><div>Pause</div>
+            <div><kbd>M</kbd></div><div>Couper / remettre le son</div>
+          </div>
+          <ul class="tips">
+            <li>🛡️ Les <b>gardes d'élite</b> bloquent tes coups de face avec leur bouclier : frappe-les <b>dans le dos</b>, <b>par-dessus</b>... ou pendant leur attaque !</li>
+            <li>🏹 Tu peux <b>trancher les flèches</b> des archers d'un coup d'épée.</li>
+            <li>🗝️ Certaines <b>herses royales</b> exigent une clé cachée en hauteur.</li>
+            <li>🚩 Touche les <b>bannières</b> pour créer un point de retour.</li>
+            <li>📱 Sur mobile, utilise les boutons tactiles sous l'écran.</li>
+          </ul>
+          <button class="btn btn-main btn-close-help">COMPRIS, À L'ÉPÉE !</button>
+        </div>
+      </section>
+
+      <!-- INTRO NIVEAU -->
+      <section id="screen-level" class="screen hidden">
+        <div class="level-card">
+          <div id="level-num" class="level-num">CHAPITRE 1</div>
+          <h2 id="level-name">Les Rues de Valnéon</h2>
+          <p id="level-desc"></p>
+          <p class="press-key">Appuie sur <kbd>Entrée</kbd> ou touche l'écran</p>
+        </div>
+      </section>
+
+      <!-- PAUSE -->
+      <section id="screen-pause" class="screen hidden">
+        <div class="panel small">
+          <h2>⏸ Halte, écuyer !</h2>
+          <button id="btn-resume" class="btn btn-main">REPRENDRE</button>
+          <button id="btn-restart" class="btn">RECOMMENCER LE CHAPITRE</button>
+          <button id="btn-quit" class="btn">RETOUR AU CHÂTEAU (TITRE)</button>
+        </div>
+      </section>
+
+      <!-- GAME OVER -->
+      <section id="screen-over" class="screen hidden">
+        <div class="panel small">
+          <h2>💀 Tombé au combat...</h2>
+          <p>Les gardes renégats t'ont eu cette fois.<br>Mais un écuyer ne renonce jamais !</p>
+          <button id="btn-retry" class="btn btn-main">⚔️ RELEVER L'ÉPÉE</button>
+          <button id="btn-over-title" class="btn">RETOUR AU TITRE</button>
+        </div>
+      </section>
+
+      <!-- NIVEAU TERMINÉ -->
+      <section id="screen-clear" class="screen hidden">
+        <div class="panel small">
+          <h2>🎺 Chapitre accompli !</h2>
+          <div id="clear-stats" class="stats"></div>
+          <button id="btn-next" class="btn btn-main">CHAPITRE SUIVANT ➜</button>
+        </div>
+      </section>
+
+      <!-- VICTOIRE -->
+      <section id="screen-win" class="screen hidden">
+        <div class="panel win">
+          <div class="win-crown">👑</div>
+          <h2>LA COURONNE EST SAUVÉE !</h2>
+          <p>« Léo, par ton courage et ton épée, je te fais<br>
+             <b>Chevalier du Royaume de Valnéon</b> ! »<br>
+             <i>— Sa Majesté Aldéric III</i></p>
+          <div id="win-stats" class="stats"></div>
+          <div id="win-rank" class="rank"></div>
+          <button id="btn-again" class="btn btn-main">🔁 NOUVELLE QUÊTE</button>
+          <button id="btn-win-title" class="btn">RETOUR AU TITRE</button>
+        </div>
+      </section>
+
+      <!-- Message contextuel (panneaux, roi, etc.) -->
+      <div id="toast" class="hidden"></div>
+      <!-- Barre de vie du boss -->
+      <div id="bossbar" class="hidden">
+        <div class="boss-name">☠️ Capitaine CORVUS — Chef des gardes renégats</div>
+        <div class="boss-track"><div id="boss-fill"></div></div>
+      </div>
+    </main>
+
+    <!-- Contrôles tactiles -->
+    <div id="touch">
+      <div class="touch-left">
+        <button class="tbtn" data-k="left">◀</button>
+        <button class="tbtn" data-k="right">▶</button>
+      </div>
+      <div class="touch-right">
+        <button class="tbtn small" data-k="dash">💨</button>
+        <button class="tbtn" data-k="attack">⚔️</button>
+        <button class="tbtn big" data-k="jump">⬆</button>
+      </div>
+    </div>
+
+    <footer>
+      <span>🖥️ Clavier : flèches / QD • Espace = saut • J = épée • K = dash</span>
+      <span class="sep">•</span>
+      <span>Par décret royal n°42 : <b>les armes à feu sont interdites</b> dans tout le royaume. 🚫🔫</span>
+    </footer>
+  </div>
+
+  <script src="js/audio.js"></script>
+  <script src="js/sprites.js"></script>
+  <script src="js/levels.js"></script>
+  <script src="js/game.js"></script>
+</body>
+</html>
