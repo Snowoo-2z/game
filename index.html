@@ -205,17 +205,13 @@ function spawnDoubleJumpRing(x,y){
   spawnParticles(x,y,8,{spreadX:8, vy:-2, color:'#FFE600', gravity:0.15})
 }
 
-const platforms = [
-  {x:0, y:480, w:960, h:60, type:'ground'},
-  {x:140, y:380, w:160, h:18, type:'float'},
-  {x:380, y:320, w:200, h:18, type:'float'},
-  {x:650, y:260, w:160, h:18, type:'float'},
-  {x:500, y:400, w:120, h:18, type:'float'},
-  {x:80, y:240, w:140, h:18, type:'float'},
-  {x:300, y:180, w:140, h:18, type:'float'},
-  {x:200, y:440, w:80, h:40, type:'block'},
-  {x:700, y:440, w:80, h:40, type:'block'},
-];
+const WORLD_W = 5000;
+let camX = 0;
+function getGroundHeight(wx){
+  // terrain vallonné doux
+  return 480 + Math.sin(wx*0.008)*14 + Math.sin(wx*0.018)*7 + Math.sin(wx*0.004)*10;
+}
+const platforms = []; // plus de plateformes en l'air, sol seul
 
 const player = {
   x: 60, y: 400, w: 28, h: 36,
@@ -236,7 +232,8 @@ let cameraShake=0;
 let globalTime=0;
 
 function reset(){
-  player.x=60; player.y=400; player.vx=0; player.vy=0; player.money=0; player.jumps=2;
+  player.x=60; player.y=getGroundHeight(60+14)-player.h; player.vx=0; player.vy=0; player.money=0; player.jumps=2;
+  camX=0;
   particles.length=0;
   updateHUD();
 }
@@ -302,6 +299,136 @@ function drawFloatPlatform(p){
   ctx.fillStyle=PAL.grassLight;
   ctx.fillRect(p.x+4, p.y, 6,2);
   ctx.fillRect(p.x+p.w-10, p.y, 6,2);
+}
+function pseudoRandom(n){ return ((Math.sin(n*127.1)*43758.5453)%1+1)%1; }
+function drawScrollingGround(cam){
+  const step=4;
+  const startX = Math.floor(cam/step)*step - step*2;
+  const endX = cam + W + step*4;
+  // --- base polygon sol ---
+  ctx.fillStyle=PAL.dirt;
+  ctx.beginPath();
+  ctx.moveTo(startX - cam, getGroundHeight(startX) - cam*0 + H); // dummy
+  // Actually draw polygon from left to right along ground top then down to bottom
+  for(let wx=startX; wx<=endX; wx+=step){
+    const gy = getGroundHeight(wx);
+    const sx = wx - cam;
+    if(wx===startX) ctx.moveTo(sx, gy);
+    else ctx.lineTo(sx, gy);
+  }
+  // close to bottom
+  ctx.lineTo(endX - cam, H);
+  ctx.lineTo(startX - cam, H);
+  ctx.closePath();
+  ctx.fill();
+
+  // --- texture dirt: bandes sombres verticales ---
+  ctx.fillStyle=PAL.dirtDark;
+  for(let wx=startX; wx<endX; wx+=32){
+    const gy = getGroundHeight(wx+16);
+    const sx = wx - cam;
+    const h = H - gy;
+    // petites veines
+    ctx.fillRect(sx+8, gy+10, 3, Math.min(h-12, 24));
+    if(pseudoRandom(wx)>0.5) ctx.fillRect(sx+18, gy+18, 2, 14);
+  }
+  // mouchetis clair
+  ctx.fillStyle=PAL.dirtLight;
+  for(let wx=startX; wx<endX; wx+=48){
+    const gy = getGroundHeight(wx);
+    const sx = wx - cam;
+    const r = pseudoRandom(wx*1.3);
+    if(r>0.4){
+      ctx.fillRect(sx+12, gy+14, 2,2);
+      if(r>0.7) ctx.fillRect(sx+6, gy+22, 2,2);
+    }
+  }
+  // --- strate horizontale sous-sol ---
+  ctx.fillStyle='#9E5A26';
+  ctx.beginPath();
+  for(let wx=startX; wx<=endX; wx+=step){
+    const gy = getGroundHeight(wx)+18;
+    const sx = wx - cam;
+    if(wx===startX) ctx.moveTo(sx, gy);
+    else ctx.lineTo(sx, gy);
+  }
+  ctx.lineTo(endX - cam, H);
+  ctx.lineTo(startX - cam, H);
+  ctx.closePath();
+  ctx.fill();
+  // pierres enterrées
+  ctx.fillStyle='#7A3D16';
+  for(let wx=startX; wx<endX; wx+=64){
+    if(pseudoRandom(wx*2.1)<0.45){
+      const gy = getGroundHeight(wx)+22 + pseudoRandom(wx+5)*10;
+      const sx = wx - cam;
+      ctx.fillRect(sx+10, gy, 6,4);
+      ctx.fillRect(sx+12, gy+4, 4,2);
+    }
+  }
+
+  // --- herbe épaisse sur le dessus ---
+  // contour herbe foncée (outline)
+  ctx.strokeStyle=PAL.outline;
+  ctx.lineWidth=2;
+  ctx.beginPath();
+  for(let wx=startX; wx<=endX; wx+=step){
+    const gy = getGroundHeight(wx);
+    const sx = wx - cam;
+    if(wx===startX) ctx.moveTo(sx, gy);
+    else ctx.lineTo(sx, gy);
+  }
+  ctx.stroke();
+  // bande herbe 10px
+  // on dessine par segment pour épaisseur
+  for(let wx=startX; wx<endX; wx+=step){
+    const gy = getGroundHeight(wx);
+    const sx = wx - cam;
+    // herbe sombre base
+    ctx.fillStyle=PAL.grassDark;
+    ctx.fillRect(sx, gy, step+1, 10);
+    ctx.fillStyle=PAL.grass;
+    ctx.fillRect(sx, gy, step+1, 7);
+    ctx.fillStyle=PAL.grassLight;
+    ctx.fillRect(sx, gy, step+1, 2);
+  }
+  // brins d'herbe pixel
+  ctx.fillStyle=PAL.grassDark;
+  for(let wx=startX; wx<endX; wx+=12){
+    const gy = getGroundHeight(wx);
+    const sx = wx - cam;
+    if(pseudoRandom(wx)>0.35){
+      ctx.fillRect(sx+3, gy-3, 2,4);
+      if(pseudoRandom(wx+1)>0.6) ctx.fillRect(sx+7, gy-4, 2,5);
+    }
+  }
+  // petites fleurs / touffes décor
+  for(let wx=startX; wx<endX; wx+=90){
+    const r = pseudoRandom(wx*0.7);
+    const gy = getGroundHeight(wx+20);
+    const sx = wx+20 - cam;
+    if(r<0.22){
+      // petite fleur jaune
+      ctx.fillStyle='#FFE600';
+      ctx.fillRect(sx, gy-6, 3,3);
+      ctx.fillStyle='#fff';
+      ctx.fillRect(sx+1, gy-7, 1,1);
+      ctx.fillStyle=PAL.grassDark;
+      ctx.fillRect(sx+1, gy-3, 1,3);
+    } else if(r<0.32){
+      // caillou
+      ctx.fillStyle='#B0A090';
+      ctx.fillRect(sx, gy-3, 5,3);
+      ctx.fillStyle='#8A7A6A';
+      ctx.fillRect(sx, gy-1, 5,1);
+    } else if(r<0.45){
+      // petite touffe buisson
+      ctx.fillStyle='#2ECC71';
+      ctx.fillRect(sx, gy-5, 6,4);
+      ctx.fillStyle='#1E9E55';
+      ctx.fillRect(sx+2, gy-3, 2,2);
+    }
+  }
 }
 
 function getSpriteGrid(state, frame){
@@ -711,51 +838,53 @@ function update(){
   player.wasSpace = jumpPressed;
   player.vy += GRAVITY;
   if(player.vy>14) player.vy=14;
+  // --- déplacement X libre dans le monde ---
   let nextX = player.x + player.vx;
-  for(const p of platforms){
-    if(checkCollision(nextX, player.y, player.w, player.h, p)){
-      if(player.vx>0) nextX = p.x - player.w;
-      else if(player.vx<0) nextX = p.x + p.w;
-      player.vx=0;
-    }
-  }
+  // limites monde
+  if(nextX < 0){ nextX=0; player.vx=0; }
+  if(nextX + player.w > WORLD_W){ nextX = WORLD_W - player.w; player.vx=0; }
   player.x = nextX;
+
+  // --- collision sol vallonné ---
   let nextY = player.y + player.vy;
   player.onGround=false;
-  for(const p of platforms){
-    if(checkCollision(player.x, nextY, player.w, player.h, p)){
-      if(player.vy>0){
-        nextY = p.y - player.h;
-        if(!wasOnGround){
-          if(player.vy>6){
-            cameraShake = Math.min(10, player.vy);
-            spawnDust(player.x+player.w/2, nextY+player.h);
-            spawnParticles(player.x+player.w/2, nextY+player.h, 4, {color:'#C47A3A'});
-            player.squish=0.9;
-            player.landTimer=10;
-          } else if(player.vy>2){
-            spawnDust(player.x+player.w/2, nextY+player.h);
-            player.squish=0.5;
-            player.landTimer=6;
-          }
+  const footX = player.x + player.w/2;
+  const groundY = getGroundHeight(footX);
+  if(nextY + player.h >= groundY){
+    if(player.vy >= 0){
+      // atterrissage
+      if(!wasOnGround){
+        if(player.vy>6){
+          cameraShake = Math.min(10, player.vy);
+          spawnDust(player.x+player.w/2, groundY);
+          spawnParticles(player.x+player.w/2, groundY, 4, {color:'#C47A3A'});
+          player.squish=0.9;
+          player.landTimer=10;
+        } else if(player.vy>2){
+          spawnDust(player.x+player.w/2, groundY);
+          player.squish=0.5;
+          player.landTimer=6;
         }
-        player.vy=0;
-        player.onGround=true;
-        player.jumps=2;
-      } else if(player.vy<0){
-        nextY = p.y + p.h;
-        player.vy=0;
       }
+      nextY = groundY - player.h;
+      player.vy=0;
+      player.onGround=true;
+      player.jumps=2;
     }
   }
+  // plafond invisible
+  if(nextY < -100){ nextY=-100; player.vy=0; }
   player.y = nextY;
-  if(player.x<0){player.x=0; player.vx=0;}
-  if(player.x+player.w>W){player.x=W-player.w; player.vx=0;}
-  if(player.y > H+80){
-    player.y=100; player.x=60; player.vy=0; player.vx=0;
+
+  if(player.y > H+120){
+    // chute dans le vide (si tombe hors sol, rare)
+    player.y=100; player.x=Math.max(60, player.x-80); player.vy=0; player.vx=0;
     cameraShake=12;
     spawnParticles(player.x+player.w/2, player.y+player.h, 16, {color:'#FF1B5A', spreadX:10, vy:-4})
   }
+  // caméra suit le joueur
+  const targetCam = Math.max(0, Math.min(player.x - W/2 + player.w/2, WORLD_W - W));
+  camX += (targetCam - camX)*0.12;
   wasOnGround = player.onGround;
   if(player.landTimer>0) player.landTimer--;
   // skid quand on change de direction vite
@@ -807,9 +936,10 @@ function drawCloud(px,py,scale){
   ctx.fill();
 }
 function drawParallax(){
-  // ciel déjà rempli avant, on ajoute couches
+  // utilise camX pour cohérence avec défilement
+  const cam = camX;
   // 1. Montagnes lointaines (très lent)
-  const mx = player.x * 0.08 + player.y * 0.02;
+  const mx = cam * 0.08;
   ctx.fillStyle='#6C5B7B';
   ctx.beginPath();
   ctx.moveTo(-200 - mx*0.5, 320);
@@ -839,7 +969,7 @@ function drawParallax(){
   ctx.lineTo(685 - mx*0.5, 225); ctx.fill();
 
   // 2. Collines moyennes (vert foncé)
-  const hx1 = player.x * 0.18;
+  const hx1 = cam * 0.18;
   ctx.fillStyle='#5BAE6B';
   ctx.beginPath();
   ctx.moveTo(-300 - hx1, 380);
@@ -849,7 +979,7 @@ function drawParallax(){
   ctx.lineTo(1200 - hx1, 480); ctx.lineTo(-300 - hx1, 480); ctx.closePath(); ctx.fill();
 
   // 3. Collines proches (vert clair)
-  const hx2 = player.x * 0.32;
+  const hx2 = cam * 0.32;
   ctx.fillStyle='#7ED190';
   ctx.beginPath();
   ctx.moveTo(-300 - hx2, 420);
@@ -867,7 +997,7 @@ function drawParallax(){
   // 4. Nuages qui dérivent + parallaxe
   parallax.drift += 0.15 + Math.abs(player.vx)*0.02;
   for(const cl of parallax.clouds){
-    let cx = (cl.x - player.x*0.12 + parallax.drift*cl.s) % (W+400) -200;
+    let cx = (cl.x - cam*0.12 + parallax.drift*cl.s) % (W+400) -200;
     // wrap
     if(cx < -200) cx += W+400;
     if(cx > W+200) cx -= W+400;
@@ -877,7 +1007,7 @@ function drawParallax(){
   }
 
   // 5. Soleil lointain (très lent)
-  const sx = 800 - player.x*0.05;
+  const sx = 800 - cam*0.05;
   const sy = 90 + Math.sin(globalTime*0.0005)*3;
   ctx.fillStyle='#FFE600';
   ctx.beginPath(); ctx.arc(sx, sy, 28,0,Math.PI*2); ctx.fill();
@@ -891,10 +1021,12 @@ function render(){
   ctx.fillStyle=PAL.sky;
   ctx.fillRect(0,0,W,H);
   drawParallax();
-  for(const p of platforms){
-    if(p.type==='ground') drawGroundTile(p.x,p.y,p.w,p.h);
-    else drawFloatPlatform(p);
-  }
+  // --- sol défilant amélioré ---
+  ctx.save();
+  // pas de translate global, drawScrollingGround gère camX
+  drawScrollingGround(camX);
+  ctx.restore();
+  // --- joueur et effets en coordonnées monde -> écran ---
   let state='idle', frame=Math.floor(player.animT);
   if(!player.onGround){
     state = player.vy<0 ? 'jump' : 'fall';
@@ -911,31 +1043,31 @@ function render(){
       frame = Math.floor(player.animT);
     }
   }
+  // world to screen
+  const sx = player.x - camX;
+  const sy = player.y;
   if(Math.abs(player.vx)>3 || !player.onGround){
     ctx.globalAlpha=0.15;
-    drawCharacter(player.x - player.vx*1.5, player.y - player.vy*0.5, player.dir, state, frame, player.squish);
+    drawCharacter(sx - player.vx*1.2, sy - player.vy*0.5, player.dir, state, frame, player.squish);
     ctx.globalAlpha=1;
   }
+  // ombre projetée sur sol vallonné
   ctx.fillStyle='rgba(0,0,0,0.18)';
-  let groundY = 480;
-  for(const p of platforms){
-    if(player.x+player.w/2 > p.x && player.x+player.w/2 < p.x+p.w && p.y > player.y){
-      if(p.y < groundY) groundY=p.y;
-    }
-  }
+  const groundY = getGroundHeight(player.x + player.w/2);
   const dist = groundY - (player.y+player.h);
-  const shadowScale = Math.max(0, 1 - dist/120);
+  const shadowScale = Math.max(0, 1 - dist/140);
   ctx.beginPath();
-  ctx.ellipse(player.x+player.w/2, groundY+2, 14*shadowScale+4, 4*shadowScale+2, 0,0,Math.PI*2);
+  ctx.ellipse(sx+player.w/2, groundY, 14*shadowScale+4, 4*shadowScale+2, 0,0,Math.PI*2);
   ctx.fill();
-  drawCharacter(player.x, player.y, player.dir, state, frame, player.squish);
+  drawCharacter(sx, sy, player.dir, state, frame, player.squish);
   for(const p of particles){
     ctx.globalAlpha = Math.max(0,p.life);
     ctx.fillStyle=p.color;
+    const px = p.x - camX;
     if(p.type==='circle'){
-      ctx.beginPath(); ctx.arc(p.x,p.y,p.size,0,Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.arc(px,p.y,p.size,0,Math.PI*2); ctx.fill();
     } else {
-      ctx.fillRect(p.x,p.y,p.size,p.size);
+      ctx.fillRect(px,p.y,p.size,p.size);
     }
   }
   ctx.globalAlpha=1;
