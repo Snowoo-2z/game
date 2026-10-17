@@ -700,10 +700,10 @@ function update(){
   if(player.skidTimer>0) player.skidTimer--;
   player.squish *= 0.82;
   if(Math.abs(player.squish)<0.01) player.squish=0;
-  // anim plus rapide en course
-  if(!player.onGround) player.animT+=1;
-  else if(Math.abs(player.vx)>0.5) player.animT+= 1 + Math.abs(player.vx)*0.15;
-  else player.animT+=0.5;
+  // anim
+  if(!player.onGround) player.animT+=0.9;
+  else if(Math.abs(player.vx)>0.5) player.animT+=0.65;
+  else player.animT+=0.35;
   for(const c of coins){
     if(c.taken) continue;
     const cx = c.x+8, cy=c.y+8;
@@ -747,9 +747,7 @@ function render(){
       frame = Math.floor(player.animT);
     } else if(Math.abs(player.vx)>0.5){
       state='run';
-      // 6 frames, vitesse selon vitesse
-      const speedFactor = Math.max(4, 7 - Math.abs(player.vx)*0.5);
-      frame = Math.floor(player.animT / speedFactor);
+      frame = Math.floor(player.animT / 1.15);
     } else {
       state='idle';
       frame = Math.floor(player.animT);
