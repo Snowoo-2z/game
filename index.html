@@ -907,20 +907,19 @@ function spinRoulette(){
   winText.textContent='';
   winText.style.color='#fff';
   winText.textContent='...';
-  // tirage 100-1000 (on mappe sur un segment pour l'affichage)
   const spins = 5 + Math.random()*3; // 5-8 tours
-  const randomSeg = Math.floor(Math.random()*segments.length);
   const segAngle = 360/segments.length;
-  // on veut que le segment choisi finisse en haut (pointeur à 0°)
-  // la roue tourne dans le sens horaire, le pointeur est en haut (-90deg offset)
-  // angle final = tours*360 + (360 - randomSeg*segAngle - segAngle/2)
-  const target = spins*360 + (360 - randomSeg*segAngle - segAngle/2) + (Math.random()*segAngle*0.6 - segAngle*0.3);
+  // rotation aléatoire totale, puis on détermine le gagnant VISUELLEMENT
+  const randomAngle = Math.random()*360;
+  const target = spins*360 + randomAngle;
   currentRotation += target;
   wheelEl.style.transform = `rotate(${currentRotation}deg)`;
   setTimeout(()=>{
-    const win = segments[randomSeg];
-    // petite variation pour vraiment 100-1000 si on veut un peu de random intra-segment
-    // mais on garde la valeur du segment pour rester lisible
+    // calcul du segment réellement sous le pointeur (top = 270°)
+    const normalized = ((currentRotation % 360)+360)%360;
+    const theta0 = ((270 - normalized)+360)%360; // angle d'origine qui est maintenant en haut
+    const idx = Math.floor((((theta0 + 90)%360)/segAngle) % segments.length;
+    const win = segments[idx];
     player.money += win;
     updateHUD();
     winText.style.color='#2ECC71';
