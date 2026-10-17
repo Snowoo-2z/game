@@ -429,17 +429,17 @@ function drawCharacter(x,y, dir, state, frame, squish){
   ctx.save();
   const pivotX = x + player.w/2;
   const pivotY = y + player.h;
+  // squash/stretch autour des pieds
   ctx.translate(pivotX, pivotY);
   ctx.scale(1 + squish*0.3, 1 - squish*0.4);
   ctx.translate(-pivotX, -pivotY);
+  // flip horizontal propre autour du centre du joueur
   if(dir===-1){
-    ctx.translate(pivotX*2 - ox*2 - totalW, 0);
-    ctx.scale(-1,1);
-    ctx.translate(-ox,0);
-    drawGrid(ox, oy, grid, pxSize);
-  } else {
-    drawGrid(ox, oy, grid, pxSize);
+    ctx.translate(pivotX, 0);
+    ctx.scale(-1, 1);
+    ctx.translate(-pivotX, 0);
   }
+  drawGrid(ox, oy, grid, pxSize);
   ctx.restore();
 }
 function drawGrid(ox, oy, grid, s){
