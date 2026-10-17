@@ -918,7 +918,7 @@ function spinRoulette(){
     // calcul du segment réellement sous le pointeur (top = 270°)
     const normalized = ((currentRotation % 360)+360)%360;
     const theta0 = ((270 - normalized)+360)%360; // angle d'origine qui est maintenant en haut
-    const idx = Math.floor((((theta0 + 90)%360)/segAngle) % segments.length;
+    const idx = Math.floor(((theta0 + 90)%360 / segAngle)) % segments.length;
     const win = segments[idx];
     player.money += win;
     updateHUD();
