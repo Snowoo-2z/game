@@ -6,38 +6,37 @@
 <title>Game</title>
 <style>
   *{margin:0;padding:0;box-sizing:border-box}
-  html,body{width:100%;height:100%;overflow:hidden;background:#87CEEB}
+  html,body{width:100%;height:100%;overflow:hidden;background:#000;display:flex;align-items:center;justify-content:center}
   #c{
     display:block;
-    width:100vw;
-    height:100vh;
+    width: min(100vw, calc(100vh * 16 / 9));
+    height: min(100vh, calc(100vw * 9 / 16));
     image-rendering: pixelated;
     image-rendering: crisp-edges;
+    background:#87CEEB;
   }
-  /* touch zones invisibles uniquement sur mobile */
   .touch{
     display:none;
     position:fixed;
-    bottom:0; left:0; right:0;
-    height:35vh;
+    inset:0;
     pointer-events:none;
   }
   .touch div{
     position:absolute;
-    top:0; bottom:0;
+    bottom:0;
+    top:40%;
     pointer-events:auto;
-    opacity:0;
   }
-  #tLeft{left:0; width:33%;}
-  #tRight{right:0; width:33%;}
-  #tJump{left:33%; width:34%;}
+  #tLeft{left:0; width:28%;}
+  #tRight{right:0; width:28%;}
+  #tJump{left:28%; right:28%;}
   @media(pointer:coarse){
     .touch{display:block}
   }
 </style>
 </head>
 <body>
-<canvas id="c"></canvas>
+<canvas id="c" width="960" height="540"></canvas>
 <div class="touch">
   <div id="tLeft"></div>
   <div id="tJump"></div>
@@ -46,38 +45,8 @@
 <script>
 const canvas = document.getElementById('c');
 const ctx = canvas.getContext('2d');
+const W = 960, H = 540;
 
-// Dimensions logiques du jeu (référence)
-const BASE_W = 960;
-const BASE_H = 540;
-let W = BASE_W;
-let H = BASE_H;
-let scale = 1;
-let offsetX = 0, offsetY = 0;
-
-function resize(){
-  // canvas plein écran
-  const dpr = window.devicePixelRatio || 1;
-  const vw = window.innerWidth;
-  const vh = window.innerHeight;
-  canvas.width = vw * dpr;
-  canvas.height = vh * dpr;
-  canvas.style.width = vw + 'px';
-  canvas.style.height = vh + 'px';
-
-  // calcul scale pour garder ratio 16:9 sans déformer, centré (contain)
-  scale = Math.min(vw / BASE_W, vh / BASE_H);
-  W = BASE_W;
-  H = BASE_H;
-  offsetX = (vw - BASE_W * scale) / 2;
-  offsetY = (vh - BASE_H * scale) / 2;
-
-  ctx.setTransform(dpr,0,0,dpr,0,0);
-}
-window.addEventListener('resize', resize);
-resize();
-
-// palette
 const PAL = {
   sky: '#87CEEB',
   outline: '#1A102E',
@@ -124,7 +93,6 @@ function isDown(...codes){ return codes.some(c=>keys[c]); }
   el.addEventListener('touchcancel', e=>{ e.preventDefault(); set(false); }, {passive:false});
 });
 
-// particles
 const particles=[];
 function spawnParticles(x,y, count, opts={}){
   for(let i=0;i<count;i++){
@@ -166,7 +134,6 @@ function spawnDoubleJumpRing(x,y){
   spawnParticles(x,y,8,{spreadX:8, vy:-2, color:'#FFE600', gravity:0.15})
 }
 
-// niveau - plateformes
 const platforms = [
   {x:0, y:480, w:960, h:60, type:'ground'},
   {x:140, y:380, w:160, h:18, type:'float'},
@@ -457,23 +424,21 @@ function drawCharacter(x,y, dir, state, frame, squish){
   const pxSize = 2;
   const totalW = 16*pxSize;
   const totalH = 20*pxSize;
-  const offsetX_ = x + (player.w - totalW)/2;
-  const offsetY_ = y + (player.h - totalH) -2 + squish*4;
+  const ox = x + (player.w - totalW)/2;
+  const oy = y + (player.h - totalH) -2 + squish*4;
   ctx.save();
   const pivotX = x + player.w/2;
   const pivotY = y + player.h;
   ctx.translate(pivotX, pivotY);
-  const sx = 1 + squish*0.3;
-  const sy = 1 - squish*0.4;
-  ctx.scale(sx, sy);
+  ctx.scale(1 + squish*0.3, 1 - squish*0.4);
   ctx.translate(-pivotX, -pivotY);
   if(dir===-1){
-    ctx.translate(pivotX*2 - offsetX_*2 - totalW, 0);
+    ctx.translate(pivotX*2 - ox*2 - totalW, 0);
     ctx.scale(-1,1);
-    ctx.translate(-offsetX_,0);
-    drawGrid(offsetX_, offsetY_, grid, pxSize);
+    ctx.translate(-ox,0);
+    drawGrid(ox, oy, grid, pxSize);
   } else {
-    drawGrid(offsetX_, offsetY_, grid, pxSize);
+    drawGrid(ox, oy, grid, pxSize);
   }
   ctx.restore();
 }
@@ -573,9 +538,7 @@ function update(){
     }
     player.onGround=false;
   }
-  if(!jumpPressed && player.vy < -4){
-    player.vy *= 0.88;
-  }
+  if(!jumpPressed && player.vy < -4) player.vy *= 0.88;
   player.wasSpace = jumpPressed;
   player.vy += GRAVITY;
   if(player.vy>14) player.vy=14;
@@ -650,47 +613,18 @@ function update(){
 }
 
 function render(){
-  // clear plein écran avec couleur cielo + lettres noires autour pour remplir bandes
-  const dpr = window.devicePixelRatio || 1;
-  const vw = window.innerWidth * dpr;
-  const vh = window.innerHeight * dpr;
-
-  // fond noir pour les bandes (letterbox)
   ctx.save();
-  ctx.setTransform(dpr,0,0,dpr,0,0);
-  ctx.fillStyle='#000';
-  ctx.fillRect(0,0, window.innerWidth, window.innerHeight);
-  // clip zone jeu
-  ctx.translate(offsetX, offsetY);
-  ctx.scale(scale, scale);
-
-  // shake interne
-  ctx.save();
-  if(cameraShake>0){
-    ctx.translate((Math.random()-0.5)*cameraShake, (Math.random()-0.5)*cameraShake);
-  }
-
-  // ciel uni simple (pas de décor)
+  if(cameraShake>0) ctx.translate((Math.random()-0.5)*cameraShake, (Math.random()-0.5)*cameraShake);
   ctx.fillStyle=PAL.sky;
   ctx.fillRect(0,0,W,H);
-
-  // plateformes
   for(const p of platforms){
-    if(p.type==='ground'){
-      drawGroundTile(p.x,p.y,p.w,p.h);
-    } else if(p.type==='float'){
-      drawFloatPlatform(p);
-    } else {
-      drawGroundTile(p.x,p.y,p.w,p.h);
-    }
+    if(p.type==='ground') drawGroundTile(p.x,p.y,p.w,p.h);
+    else drawFloatPlatform(p);
   }
   for(const c of coins) drawCoin(c);
-
-  let state='idle';
-  let frame=0;
+  let state='idle', frame=0;
   if(!player.onGround){
     state = player.vy<0 ? 'jump' : 'fall';
-    frame=0;
   } else {
     if(Math.abs(player.vx)>0.5){
       state='run';
@@ -728,7 +662,6 @@ function render(){
     }
   }
   ctx.globalAlpha=1;
-  ctx.restore();
   ctx.restore();
 }
 
