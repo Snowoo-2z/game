@@ -783,11 +783,114 @@ function update(){
   if(cameraShake<0.1) cameraShake=0;
 }
 
+// --- PARALLAXE ---
+const parallax = {
+  clouds: [
+    {x:120, y:80, s:1},
+    {x:380, y:60, s:1.2},
+    {x:650, y:100, s:0.9},
+    {x:820, y:70, s:1.1},
+    {x:200, y:130, s:0.8},
+  ],
+  drift: 0
+};
+function drawCloud(px,py,scale){
+  ctx.fillStyle='rgba(0,0,0,0.08)';
+  ctx.beginPath();
+  ctx.ellipse(px+3,py+5, 26*scale, 12*scale,0,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle='#fff';
+  ctx.beginPath();
+  ctx.arc(px, py, 16*scale,0,Math.PI*2);
+  ctx.arc(px+18*scale, py+5*scale, 14*scale,0,Math.PI*2);
+  ctx.arc(px-16*scale, py+6*scale, 12*scale,0,Math.PI*2);
+  ctx.arc(px+7*scale, py-9*scale, 11*scale,0,Math.PI*2);
+  ctx.fill();
+}
+function drawParallax(){
+  // ciel déjà rempli avant, on ajoute couches
+  // 1. Montagnes lointaines (très lent)
+  const mx = player.x * 0.08 + player.y * 0.02;
+  ctx.fillStyle='#6C5B7B';
+  ctx.beginPath();
+  ctx.moveTo(-200 - mx*0.5, 320);
+  ctx.lineTo(80 - mx*0.3, 220);
+  ctx.lineTo(200 - mx*0.3, 260);
+  ctx.lineTo(360 - mx*0.4, 190);
+  ctx.lineTo(520 - mx*0.3, 250);
+  ctx.lineTo(700 - mx*0.5, 200);
+  ctx.lineTo(860 - mx*0.4, 240);
+  ctx.lineTo(1160 - mx*0.3, 210);
+  ctx.lineTo(1160, 360);
+  ctx.lineTo(-200, 360);
+  ctx.closePath(); ctx.fill();
+  // neige sur montagnes
+  ctx.fillStyle='rgba(255,255,255,0.9)';
+  ctx.beginPath();
+  ctx.moveTo(80 - mx*0.3, 220);
+  ctx.lineTo(95 - mx*0.3, 240);
+  ctx.lineTo(65 - mx*0.3, 240); ctx.fill();
+  ctx.beginPath();
+  ctx.moveTo(360 - mx*0.4, 190);
+  ctx.lineTo(380 - mx*0.4, 215);
+  ctx.lineTo(340 - mx*0.4, 215); ctx.fill();
+  ctx.beginPath();
+  ctx.moveTo(700 - mx*0.5, 200);
+  ctx.lineTo(715 - mx*0.5, 225);
+  ctx.lineTo(685 - mx*0.5, 225); ctx.fill();
+
+  // 2. Collines moyennes (vert foncé)
+  const hx1 = player.x * 0.18;
+  ctx.fillStyle='#5BAE6B';
+  ctx.beginPath();
+  ctx.moveTo(-300 - hx1, 380);
+  ctx.quadraticCurveTo(80 - hx1, 280, 280 - hx1, 360);
+  ctx.quadraticCurveTo(480 - hx1, 410, 680 - hx1, 340);
+  ctx.quadraticCurveTo(880 - hx1, 300, 1200 - hx1, 370);
+  ctx.lineTo(1200 - hx1, 480); ctx.lineTo(-300 - hx1, 480); ctx.closePath(); ctx.fill();
+
+  // 3. Collines proches (vert clair)
+  const hx2 = player.x * 0.32;
+  ctx.fillStyle='#7ED190';
+  ctx.beginPath();
+  ctx.moveTo(-300 - hx2, 420);
+  ctx.quadraticCurveTo(100 - hx2, 340, 300 - hx2, 400);
+  ctx.quadraticCurveTo(520 - hx2, 450, 740 - hx2, 380);
+  ctx.quadraticCurveTo(900 - hx2, 350, 1220 - hx2, 410);
+  ctx.lineTo(1220 - hx2, 480); ctx.lineTo(-300 - hx2, 480); ctx.closePath(); ctx.fill();
+  // reflets collines proches
+  ctx.fillStyle='rgba(255,255,255,0.18)';
+  ctx.beginPath();
+  ctx.ellipse(120 - hx2, 380, 50, 18, 0,0,Math.PI*2); ctx.fill();
+  ctx.beginPath();
+  ctx.ellipse(620 - hx2, 390, 70, 22, 0,0,Math.PI*2); ctx.fill();
+
+  // 4. Nuages qui dérivent + parallaxe
+  parallax.drift += 0.15 + Math.abs(player.vx)*0.02;
+  for(const cl of parallax.clouds){
+    let cx = (cl.x - player.x*0.12 + parallax.drift*cl.s) % (W+400) -200;
+    // wrap
+    if(cx < -200) cx += W+400;
+    if(cx > W+200) cx -= W+400;
+    // léger flottement vertical lié au temps
+    const fy = cl.y + Math.sin(globalTime*0.001 + cl.x)*2;
+    drawCloud(cx, fy, cl.s);
+  }
+
+  // 5. Soleil lointain (très lent)
+  const sx = 800 - player.x*0.05;
+  const sy = 90 + Math.sin(globalTime*0.0005)*3;
+  ctx.fillStyle='#FFE600';
+  ctx.beginPath(); ctx.arc(sx, sy, 28,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle='#FFF7AA';
+  ctx.beginPath(); ctx.arc(sx, sy, 16,0,Math.PI*2); ctx.fill();
+}
+
 function render(){
   ctx.save();
   if(cameraShake>0) ctx.translate((Math.random()-0.5)*cameraShake, (Math.random()-0.5)*cameraShake);
   ctx.fillStyle=PAL.sky;
   ctx.fillRect(0,0,W,H);
+  drawParallax();
   for(const p of platforms){
     if(p.type==='ground') drawGroundTile(p.x,p.y,p.w,p.h);
     else drawFloatPlatform(p);
