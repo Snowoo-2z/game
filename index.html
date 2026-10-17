@@ -33,10 +33,28 @@
   @media(pointer:coarse){
     .touch{display:block}
   }
+  #hud{
+    position:fixed;
+    top:14px;
+    right:14px;
+    background:rgba(0,0,0,0.65);
+    border:2px solid #fff;
+    color:#FFE600;
+    font-family: monospace;
+    font-weight:900;
+    font-size:18px;
+    letter-spacing:1px;
+    padding:8px 14px;
+    image-rendering: pixelated;
+    pointer-events:none;
+    z-index:10;
+    box-shadow: 3px 3px 0 rgba(0,0,0,0.5);
+  }
 </style>
 </head>
 <body>
 <canvas id="c" width="960" height="540"></canvas>
+<div id="hud">0$</div>
 <div class="touch">
   <div id="tLeft"></div>
   <div id="tJump"></div>
@@ -145,14 +163,6 @@ const platforms = [
   {x:200, y:440, w:80, h:40, type:'block'},
   {x:700, y:440, w:80, h:40, type:'block'},
 ];
-const coins = [
-  {x:210, y:340, taken:false},
-  {x:470, y:280, taken:false},
-  {x:720, y:220, taken:false},
-  {x:370, y:140, taken:false},
-  {x:120, y:200, taken:false},
-  {x:540, y:360, taken:false},
-];
 
 const player = {
   x: 60, y: 400, w: 28, h: 36,
@@ -165,7 +175,7 @@ const player = {
   wasSpace:false,
   squish:0,
   animT:0,
-  score:0,
+  money:0,
   landTimer:0,
   skidTimer:0
 };
@@ -173,9 +183,12 @@ let cameraShake=0;
 let globalTime=0;
 
 function reset(){
-  player.x=60; player.y=400; player.vx=0; player.vy=0; player.score=0; player.jumps=2;
-  coins.forEach(c=>c.taken=false);
+  player.x=60; player.y=400; player.vx=0; player.vy=0; player.money=0; player.jumps=2;
   particles.length=0;
+  updateHUD();
+}
+function updateHUD(){
+  document.getElementById('hud').textContent = player.money + '$';
 }
 
 const GRAVITY = 0.62;
@@ -573,7 +586,7 @@ function drawGrid(ox, oy, grid, s){
     }
   }
 }
-function drawCoin(c){
+function _unused_drawCoin(c){
   if(c.taken) return;
   const bob = Math.sin(globalTime*0.004 + c.x)*4;
   const x = c.x, y = c.y + bob;
@@ -704,16 +717,6 @@ function update(){
   if(!player.onGround) player.animT+=0.9;
   else if(Math.abs(player.vx)>0.5) player.animT+=0.65;
   else player.animT+=0.35;
-  for(const c of coins){
-    if(c.taken) continue;
-    const cx = c.x+8, cy=c.y+8;
-    if(player.x < cx && player.x+player.w > cx-8 && player.y < cy && player.y+player.h > cy-8){
-      c.taken=true;
-      player.score++;
-      spawnParticles(cx,cy,12,{color:'#FFD700', spreadX:6, vy:-3});
-      cameraShake=4;
-    }
-  }
   for(let i=particles.length-1;i>=0;i--){
     const p=particles[i];
     p.x+=p.vx;
@@ -736,7 +739,6 @@ function render(){
     if(p.type==='ground') drawGroundTile(p.x,p.y,p.w,p.h);
     else drawFloatPlatform(p);
   }
-  for(const c of coins) drawCoin(c);
   let state='idle', frame=Math.floor(player.animT);
   if(!player.onGround){
     state = player.vy<0 ? 'jump' : 'fall';
